@@ -13,9 +13,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
-    if (data.user.role !== 'admin') {
-      throw new Error('Access denied. Admin accounts only.');
-    }
     localStorage.setItem('adminToken', data.token);
     localStorage.setItem('adminUser', JSON.stringify(data.user));
     setUser(data.user);
@@ -29,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isAdmin: user?.role === 'admin' }}>
       {children}
     </AuthContext.Provider>
   );

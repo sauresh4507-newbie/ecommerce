@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const EMPTY_CAT = { name: '', description: '', image: '', icon: 'tag' };
 const EMPTY_COUPON = {
@@ -10,6 +11,7 @@ const EMPTY_COUPON = {
 };
 
 function CategoriesSection() {
+  const { isAdmin } = useAuth();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,7 +50,7 @@ function CategoriesSection() {
     <div className="card">
       <div className="card-header">
         <div><div className="card-title">Categories</div><div className="text-muted text-sm">{categories.length} categories</div></div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add</button>
+        {isAdmin && <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add</button>}
       </div>
       {loading ? <div className="spinner" /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
@@ -57,10 +59,12 @@ function CategoriesSection() {
               {c.image && <img src={c.image} alt={c.name} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} />}
               <div style={{ fontWeight: 700, fontSize: 14 }}>{c.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{c.description || 'No description'}</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                <button className="btn btn-sm btn-secondary" onClick={() => openEdit(c)}><Edit2 size={12} /></button>
-                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c._id)}><Trash2 size={12} /></button>
-              </div>
+              {isAdmin && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                  <button className="btn btn-sm btn-secondary" onClick={() => openEdit(c)}><Edit2 size={12} /></button>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c._id)}><Trash2 size={12} /></button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -90,6 +94,7 @@ function CategoriesSection() {
 }
 
 function CouponsSection() {
+  const { isAdmin } = useAuth();
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -135,13 +140,18 @@ function CouponsSection() {
   return (
     <div className="card">
       <div className="card-header">
-        <div><div className="card-title">Coupons</div><div className="text-muted text-sm">{coupons.length} coupons</div></div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add</button>
+        <div><div className="card-title">Coupons & Promo Codes</div><div className="text-muted text-sm">{coupons.length} coupons available</div></div>
+        {isAdmin && <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add</button>}
       </div>
       {loading ? <div className="spinner" /> : coupons.length === 0 ? <div className="empty-state"><h3>No coupons yet</h3></div> : (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Used</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Used</th><th>Expires</th><th>Status</th>
+                {isAdmin && <th>Actions</th>}
+              </tr>
+            </thead>
             <tbody>
               {coupons.map(c => (
                 <tr key={c._id}>
@@ -154,12 +164,14 @@ function CouponsSection() {
                     {new Date(c.expiryDate).toLocaleDateString()}
                   </td>
                   <td><span className={`badge ${c.isActive ? 'badge-success' : 'badge-danger'}`}>{c.isActive ? 'Active' : 'Inactive'}</span></td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-sm btn-secondary" onClick={() => openEdit(c)}><Edit2 size={13} /></button>
-                      <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c._id)}><Trash2 size={13} /></button>
-                    </div>
-                  </td>
+                  {isAdmin && (
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-sm btn-secondary" onClick={() => openEdit(c)}><Edit2 size={13} /></button>
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c._id)}><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -206,11 +218,16 @@ function CouponsSection() {
 }
 
 export default function CatalogPage() {
+  const { isAdmin } = useAuth();
   return (
     <div className="content">
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Catalog Management</h1>
-        <p className="text-muted text-sm" style={{ marginTop: 4 }}>Manage product categories and discount coupons</p>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
+          {isAdmin ? 'Catalog Management' : 'Catalog & Offers'}
+        </h1>
+        <p className="text-muted text-sm" style={{ marginTop: 4 }}>
+          {isAdmin ? 'Manage product categories and discount coupons' : 'Browse active store categories and discount coupons'}
+        </p>
       </div>
       <CategoriesSection />
       <CouponsSection />

@@ -21,18 +21,46 @@ const nav = [
 ];
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => { logout(); navigate('/login'); };
-  const initials = user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'AD';
+  const initials = user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || (isAdmin ? 'AD' : 'CU');
+
+  const nav = [
+    {
+      label: 'Overview',
+      items: [
+        { to: '/', icon: LayoutDashboard, label: isAdmin ? 'Dashboard' : 'Customer Home' },
+        { to: '/orders', icon: ShoppingCart, label: isAdmin ? 'Orders' : 'My Orders' },
+      ],
+    },
+    {
+      label: 'Catalog',
+      items: [
+        { to: '/products', icon: Package, label: 'Products' },
+        { to: '/categories', icon: Tag, label: 'Categories' },
+        { to: '/coupons', icon: Ticket, label: 'Coupons' },
+      ],
+    },
+    ...(isAdmin ? [
+      {
+        label: 'Users',
+        items: [
+          { to: '/customers', icon: Users, label: 'Customers' },
+        ],
+      },
+    ] : []),
+  ];
 
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">🛒</div>
         <span className="sidebar-logo-text">ShopFlow</span>
-        <span className="sidebar-logo-badge">ADMIN</span>
+        <span className={`sidebar-logo-badge ${!isAdmin ? 'badge-info' : ''}`}>
+          {isAdmin ? 'ADMIN' : 'CUSTOMER'}
+        </span>
       </div>
 
       <nav className="sidebar-nav">
@@ -58,8 +86,8 @@ export default function Sidebar() {
         <div className="admin-badge">
           <div className="admin-avatar">{initials}</div>
           <div className="admin-info">
-            <div className="admin-name">{user?.name || 'Admin'}</div>
-            <div className="admin-role">Administrator</div>
+            <div className="admin-name">{user?.name || (isAdmin ? 'Admin' : 'Customer')}</div>
+            <div className="admin-role">{isAdmin ? 'Administrator' : 'Customer / Member'}</div>
           </div>
           <button className="btn-icon" onClick={handleLogout} title="Logout" style={{ padding: '6px' }}>
             <LogOut size={15} />

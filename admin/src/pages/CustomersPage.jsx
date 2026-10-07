@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, UserX, UserCheck, Eye, X } from 'lucide-react';
+import { Search, UserX, UserCheck, Eye, X, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function CustomersPage() {
+  const { isAdmin } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
 
   const fetchCustomers = useCallback(async () => {
+    if (!isAdmin) return;
     setLoading(true);
     try {
       const params = {};
@@ -18,9 +22,26 @@ export default function CustomersPage() {
       setCustomers(data.customers || []);
     } catch { toast.error('Failed to load customers'); }
     finally { setLoading(false); }
-  }, [search]);
+  }, [isAdmin, search]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
+
+  if (!isAdmin) {
+    return (
+      <div className="content">
+        <div className="card" style={{ textAlign: 'center', padding: '50px 20px', maxWidth: 500, margin: '40px auto' }}>
+          <ShieldAlert size={48} color="var(--accent)" style={{ marginBottom: 16 }} />
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Admin Access Required</h2>
+          <p className="text-muted text-sm" style={{ marginBottom: 20 }}>
+            The customer directory is restricted to administrators. You are currently logged in with a customer account.
+          </p>
+          <Link to="/" className="btn btn-primary" style={{ display: 'inline-flex', justifyContent: 'center' }}>
+            Go to Customer Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const toggleStatus = async (customer) => {
     const newStatus = customer.status === 'active' ? 'suspended' : 'active';

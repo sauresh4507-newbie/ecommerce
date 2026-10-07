@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
@@ -52,17 +54,111 @@ const orderStatusBadge = (status) => {
 };
 
 export default function DashboardPage() {
+  const { user, isAdmin } = useAuth();
   const [data, setData] = useState(null);
+  const [customerOrders, setCustomerOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/admin/stats')
-      .then(r => setData(r.data))
-      .catch(() => toast.error('Failed to load dashboard data'))
-      .finally(() => setLoading(false));
-  }, []);
+    if (isAdmin) {
+      api.get('/admin/stats')
+        .then(r => setData(r.data))
+        .catch(() => toast.error('Failed to load dashboard data'))
+        .finally(() => setLoading(false));
+    } else {
+      // Customer view
+      api.get('/orders')
+        .then(r => {
+          setCustomerOrders(r.data.orders || []);
+        })
+        .catch(() => toast.error('Failed to load orders'))
+        .finally(() => setLoading(false));
+    }
+  }, [isAdmin]);
 
   if (loading) return <div className="loading-page"><div className="spinner" /><span>Loading dashboard…</span></div>;
+
+  if (!isAdmin) {
+    const totalSpent = customerOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const deliveredCount = customerOrders.filter(o => o.status === 'Delivered').length;
+    return (
+      <div className="content">
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 99, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+            CUSTOMER ACCOUNT
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
+            Welcome back, {user?.name || 'Customer'}!
+          </h1>
+          <p className="text-muted text-sm" style={{ marginTop: 4 }}>
+            Here is an overview of your ShopFlow customer account, orders, and perks.
+          </p>
+        </div>
+
+        <div className="stats-grid">
+          <StatCard label="Total Orders" value={customerOrders.length} icon={ShoppingCart} gradient="var(--gradient-4)" />
+          <StatCard label="Delivered" value={deliveredCount} icon={CheckCircle} gradient="linear-gradient(135deg,#22c55e,#16a34a)" />
+          <StatCard label="Total Spent" value={totalSpent.toFixed(2)} icon={DollarSign} gradient="var(--gradient-1)" prefix="$" />
+          <StatCard label="Account Status" value="Active Member" icon={Users} gradient="var(--gradient-2)" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginTop: 24 }}>
+          <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="card-title">My Recent Orders</div>
+              <Link to="/orders" className="btn btn-sm btn-secondary">View All Orders</Link>
+            </div>
+            {customerOrders.length === 0 ? (
+              <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No orders placed yet.
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Items</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerOrders.slice(0, 5).map(o => (
+                      <tr key={o._id}>
+                        <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--accent)' }}>…{o._id.slice(-8)}</td>
+                        <td style={{ fontSize: 13 }}>{o.orderItems?.length || 0} item(s)</td>
+                        <td style={{ fontWeight: 700 }}>${o.totalPrice?.toFixed(2)}</td>
+                        <td>{orderStatusBadge(o.status)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">Quick Actions</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link to="/products" className="btn btn-primary" style={{ justifyContent: 'center' }}>
+                <Package size={16} /> Browse Products
+              </Link>
+              <Link to="/categories" className="btn btn-secondary" style={{ justifyContent: 'center' }}>
+                Explore Categories
+              </Link>
+              <Link to="/coupons" className="btn btn-secondary" style={{ justifyContent: 'center' }}>
+                View Available Coupons
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!data) return <div className="content"><p>Could not load dashboard. Make sure the backend is running.</p></div>;
 
   const { stats, dailySales, monthlySales, recentOrders, bestSellers, lowStockProducts } = data;

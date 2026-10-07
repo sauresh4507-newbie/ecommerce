@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, X, Image } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const EMPTY = {
   name: '', brand: '', category: '', price: '', discountPrice: '',
@@ -12,6 +13,7 @@ const EMPTY = {
 };
 
 export default function ProductsPage() {
+  const { isAdmin } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,9 @@ export default function ProductsPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Products</h1>
           <p className="text-muted text-sm" style={{ marginTop: 4 }}>{total} total products</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add Product</button>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add Product</button>
+        )}
       </div>
 
       <div className="filter-row">
@@ -122,7 +126,8 @@ export default function ProductsPage() {
               <thead>
                 <tr>
                   <th>Product</th><th>Category</th><th>Price</th>
-                  <th>Discount</th><th>Stock</th><th>Rating</th><th>Flags</th><th>Actions</th>
+                  <th>Discount</th><th>Stock</th><th>Rating</th><th>Flags</th>
+                  {isAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -151,12 +156,14 @@ export default function ProductsPage() {
                       {p.isBestSeller && <span className="badge badge-success" style={{ marginRight: 4 }}>Best Seller</span>}
                       {p.isFlashSale && <span className="badge badge-danger">Flash Sale</span>}
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-sm btn-secondary" onClick={() => openEdit(p)}><Edit2 size={13} /></button>
-                        <button className="btn btn-sm btn-danger" onClick={() => setDeleteId(p._id)}><Trash2 size={13} /></button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm btn-secondary" onClick={() => openEdit(p)}><Edit2 size={13} /></button>
+                          <button className="btn btn-sm btn-danger" onClick={() => setDeleteId(p._id)}><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

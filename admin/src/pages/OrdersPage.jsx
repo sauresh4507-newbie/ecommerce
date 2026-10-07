@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, ChevronDown, Eye, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const STATUS_OPTIONS = ['all', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
 
@@ -15,6 +16,7 @@ const statusBadge = (status) => {
 };
 
 export default function OrdersPage() {
+  const { isAdmin } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -28,16 +30,33 @@ export default function OrdersPage() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit: 12 };
-      if (statusFilter !== 'all') params.status = statusFilter;
-      if (search) params.search = search;
-      const { data } = await api.get('/orders/all', { params });
-      setOrders(data.orders || []);
-      setPages(data.pages || 1);
-      setTotal(data.total || 0);
+      if (isAdmin) {
+        const params = { page, limit: 12 };
+        if (statusFilter !== 'all') params.status = statusFilter;
+        if (search) params.search = search;
+        const { data } = await api.get('/orders/all', { params });
+        setOrders(data.orders || []);
+        setPages(data.pages || 1);
+        setTotal(data.total || 0);
+      } else {
+        const { data } = await api.get('/orders');
+        let list = data.orders || [];
+        if (statusFilter !== 'all') {
+          list = list.filter(o => o.status === statusFilter);
+        }
+        if (search) {
+          list = list.filter(o =>
+            o._id.includes(search) ||
+            o.trackingNumber?.toLowerCase().includes(search.toLowerCase())
+          );
+        }
+        setOrders(list);
+        setPages(1);
+        setTotal(list.length);
+      }
     } catch { toast.error('Failed to load orders'); }
     finally { setLoading(false); }
-  }, [page, statusFilter, search]);
+  }, [isAdmin, page, statusFilter, search]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
@@ -55,8 +74,12 @@ export default function OrdersPage() {
     <div className="content">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Orders</h1>
-          <p className="text-muted text-sm" style={{ marginTop: 4 }}>{total} total orders</p>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
+            {isAdmin ? 'Orders' : 'My Orders'}
+          </h1>
+          <p className="text-muted text-sm" style={{ marginTop: 4 }}>
+            {isAdmin ? `${total} total store orders` : `${total} order(s) placed by your account`}
+          </p>
         </div>
       </div>
 
@@ -175,16 +198,18 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Status Update */}
-            <div>
-              <label className="form-label">Update Order Status</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={{ flex: 1 }}>
-                  {STATUS_OPTIONS.filter(s => s !== 'all').map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <button className="btn btn-primary" onClick={updateStatus}>Update</button>
+            {/* Status Update (Admin Only) */}
+            {isAdmin && (
+              <div>
+                <label className="form-label">Update Order Status</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={{ flex: 1 }}>
+                    {STATUS_OPTIONS.filter(s => s !== 'all').map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <button className="btn btn-primary" onClick={updateStatus}>Update</button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
